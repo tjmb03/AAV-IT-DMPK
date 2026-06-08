@@ -165,7 +165,7 @@ The **load-bearing assumption is conserved biology** ("swap physiology, hold bio
 These are pointers to the literature and guidance that inform the modeling choices, given by topic and source rather than as exact citations — please confirm current versions and details directly.
 
 - FDA / CBER guidance on **preclinical assessment of investigational cellular and gene therapy products**, and on **long-term follow-up after administration of human gene therapy products** (delayed-effect monitoring).
-- NHP **CSF/intrathecal AAV biodistribution and dorsal-root-ganglion toxicity** work from the Wilson / Hordeaux group and related vector-pharmacology literature.
+- NHP **CSF/intrathecal AAV biodistribution and dorsal-root-ganglion toxicity** work from the Wilson / Hordeaux group and related vector-pharmacology literature [1](https://pubmed.ncbi.nlm.nih.gov/30073179/).
 - Comparative **CSF physiology and turnover** across rodent, nonhuman primate, and human (CSF volume, formation/absorption rate) from the CSF-dynamics literature.
 - Literature on **route of CSF administration** (intra-cisterna-magna vs lumbar vs intracerebroventricular) and its effect on CNS vector distribution.
 - **DRG detargeting** of AAV transgene expression via incorporation of ganglion-enriched **miR-183 (the miR-183/96/182 cluster) target sites**, as a capsid/cassette engineering approach to the sensory-neuron toxicity.
