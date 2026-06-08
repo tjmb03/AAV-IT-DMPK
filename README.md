@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-illustrative%20scaffold-orange)
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/)
+[![Launch app](https://img.shields.io/badge/launch-live%20app-2c6fbb?logo=streamlit&logoColor=white)](https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/)
 ---
 
 ## Overview
@@ -188,31 +188,6 @@ pytest -q                   # the scientific claims, as tests (also run in CI)
 Or install as a package: `pip install -e .` (library deps: NumPy, SciPy, matplotlib, pandas; Python 3.10+).
 
 **Interactive app.** An interactive explorer (sidebar controls for species, route, serotype, dose; tabs for disposition, translation, DRG safety, saturable uptake, PD, and a live Bayesian update) is in `app.py`:
-**Live app:** https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/
+**Live app:**
+https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/
 
-```bash
-streamlit run app.py
-```
-
-To deploy free, push the repo to GitHub and point [Streamlit Community Cloud](https://share.streamlit.io) at `app.py` (it installs from `requirements.txt`, which includes `streamlit` for that reason).
-
-```
-aav_it_dmpk/
-  physiology.py        species physiology + serotype tropism; the swappable layer
-  model.py             the mechanistic ODE model, serotype application, metrics
-  translation.py       cross-species dose projection and normalization bases
-  data_integration.py  identifiable re-fitting (two streams) + Bayesian updating
-  biodistribution.py   study-report-unit biodistribution tables
-  pd_safety.py         DRG safety readout and transgene PD (cross-correcting enzyme)
-  validation.py        verification, predictive checks, SBC, and Sobol sensitivity
-  vpc.py               visual predictive checks (posterior-predictive VPC / pcVPC)
-  plotting.py          figures
-tests/test_pipeline.py executable scientific claims (route, linearity, DRG, PD, Bayesian, V&V, VPC)
-demo.py                baseline end-to-end walkthrough
-demo_extensions.py     serotype/DRG, saturable uptake, PD, and Bayesian updating
-demo_validation.py     verification + validation + sensitivity walkthrough
-demo_vpc.py            visual predictive checks (CSF PK and biodistribution)
-app.py                 interactive Streamlit decision-support app
-pyproject.toml         packaging (pip install -e .)
-.github/workflows/     CI: tests across Python 3.10-3.12 + figure regeneration
-```
