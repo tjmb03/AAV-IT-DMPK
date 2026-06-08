@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-illustrative%20scaffold-orange)
-
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/)
 ---
 
 ## Overview
@@ -188,6 +188,7 @@ pytest -q                   # the scientific claims, as tests (also run in CI)
 Or install as a package: `pip install -e .` (library deps: NumPy, SciPy, matplotlib, pandas; Python 3.10+).
 
 **Interactive app.** An interactive explorer (sidebar controls for species, route, serotype, dose; tabs for disposition, translation, DRG safety, saturable uptake, PD, and a live Bayesian update) is in `app.py`:
+**Live app:** https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/
 
 ```bash
 streamlit run app.py
