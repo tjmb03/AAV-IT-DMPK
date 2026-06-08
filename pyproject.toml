@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aav-it-dmpk"
+version = "0.2.0"
+description = "Mechanistic translational PK/biodistribution framework for intrathecal AAV gene therapy (mouse -> NHP -> human). Illustrative scaffold."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Bo Ma" }]
+keywords = ["AAV", "gene-therapy", "intrathecal", "PBPK", "QSP", "DMPK",
+            "translational-modeling", "biodistribution", "CNS"]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools]
+packages = ["aav_it_dmpk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

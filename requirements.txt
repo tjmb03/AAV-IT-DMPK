@@ -1,0 +1,8 @@
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+pandas>=2.0
+# Needed only for the interactive app (app.py). Streamlit Community Cloud
+# installs from this file, so it is listed here to make deployment turnkey;
+# the library + tests themselves require only the four packages above.
+streamlit>=1.33
