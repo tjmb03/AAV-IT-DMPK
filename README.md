@@ -168,7 +168,7 @@ These are pointers to the literature and guidance that inform the modeling choic
 - NHP **CSF/intrathecal AAV biodistribution and dorsal-root-ganglion toxicity** work from the Wilson / Hordeaux group and related vector-pharmacology literature.
 - Comparative **CSF physiology and turnover** across rodent, nonhuman primate, and human (CSF volume, formation/absorption rate) from the CSF-dynamics literature.
 - Literature on **route of CSF administration** (intra-cisterna-magna vs lumbar vs intracerebroventricular) and its effect on CNS vector distribution.
-- **DRG detargeting** of AAV transgene expression via incorporation of ganglion-enriched **miRNA (miR-183/miR-182) target sites**, as a capsid/cassette engineering approach to the sensory-neuron toxicity.
+- **DRG detargeting** of AAV transgene expression via incorporation of ganglion-enriched **miR-183 (the miR-183/96/182 cluster) target sites**, as a capsid/cassette engineering approach to the sensory-neuron toxicity.
 - The **secreted-enzyme / cross-correction** paradigm for CNS lysosomal storage disorders (enzyme uptake by bystander cells via mannose-6-phosphate receptor), as the mechanistic basis of the PD model.
 - **Bayesian / population-PK model updating** and credible-interval reporting for dose justification under sparse preclinical data; **visual predictive checks** (incl. prediction-corrected VPC) for model evaluation.
 
