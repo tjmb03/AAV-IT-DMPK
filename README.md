@@ -173,7 +173,7 @@ The **load-bearing assumption is conserved biology** ("swap physiology, hold bio
 
 ## Selected references (general, for orientation)
 
-These are pointers to the literature and guidance that inform the modeling choices, given by topic and source rather than as exact citations — please confirm current versions and details directly.
+These are pointers to the literature and guidance that inform the modeling choices, given by topic and source with related citations.
 
 - FDA / CBER guidance on **preclinical assessment of investigational cellular and gene therapy products**, and on **long-term follow-up after administration of human gene therapy products** (delayed-effect monitoring). [1](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/preclinical-assessment-investigational-cellular-and-gene-therapy-products); [2](https://www.federalregister.gov/documents/2020/01/30/2020-01710/long-term-follow-up-after-administration-of-human-gene-therapy-products-guidance-for-industry)
 - NHP **CSF/intrathecal AAV biodistribution and dorsal-root-ganglion toxicity** work from the Wilson / Hordeaux group and related vector-pharmacology literature. [3](https://pubmed.ncbi.nlm.nih.gov/30073179/); [4](https://journals.sagepub.com/doi/full/10.1089/hum.2020.167); [5](https://pubmed.ncbi.nlm.nih.gov/31017018/); [6](https://www.science.org/doi/10.1126/scitranslmed.aba9188)
