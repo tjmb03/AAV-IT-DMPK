@@ -1,3 +1,14 @@
+> **Disclaimer:** All datasets in this repository are simulated or 
+> pseudodata generated solely for methodological demonstration purposes. 
+> No proprietary, confidential, patient-derived, or employer-affiliated 
+> data is included. This work represents independent research and 
+> educational development conducted outside of any employment context 
+> and does not reflect the proprietary methods, data, or intellectual 
+> property of any employer or collaborator.
+> 
+> This repository is released under the [MIT License](LICENSE).
+> © 2026 Bo Ma (tjmb03). Reuse with attribution.
+
 # A mechanistic translational PK / biodistribution model for intrathecal AAV gene therapy
 
 *Mouse → cynomolgus → human, built on a mechanistic compartmental model of vector disposition in the CSF–CNS axis.*
