@@ -243,6 +243,13 @@ def exposure_metrics(t, states, phys):
         "transduced_per_g_cns": transduced_total / cns_mass,
         "protein_peak_AU": float(np.max(protein_total_t)),
         "protein_terminal_AU": float(protein_total_t[-1]),
+        # Intensive (per-gram) counterparts. The *_AU metrics above are
+        # extensive totals summed over regions; matching an extensive metric
+        # across species conserves total dose and therefore dilutes the
+        # per-gram level in the larger species. Use these when the efficacy
+        # hypothesis is a tissue concentration rather than a whole-CNS amount.
+        "protein_peak_per_g_cns": float(np.max(protein_total_t)) / cns_mass,
+        "protein_terminal_per_g_cns": float(protein_total_t[-1]) / cns_mass,
         "drg_total_vg": drg_total,
         "drg_terminal_per_region": [float(states["Vdrg"][r][-1]) for r in range(N)],
     }

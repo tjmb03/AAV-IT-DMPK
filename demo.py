@@ -115,12 +115,17 @@ def main():
         # which is the whole point: the basis is an output, not an assumption.
         nhp_row = df[df["species"] == cyno["label"]].iloc[0]
         hum_row = df[df["species"] == human["label"]].iloc[0]
-        bases = ("vg_per_kg", "vg_per_g_brain", "vg_per_mL_csf")
+        bases = ("total_vg", "vg_per_kg", "vg_per_g_brain", "vg_per_mL_csf")
         folds = {b: hum_row[b] / nhp_row[b] for b in bases}
         most_stable = min(folds, key=lambda b: abs(np.log(folds[b])))
         fold_str = ", ".join(f"{b} x{folds[b]:.2f}" for b in bases)
         print(f"  NHP->human fold-change by basis: {fold_str}")
-        print(f"  -> most stable basis for this driver: {most_stable}\n")
+        print(f"  -> most stable basis for this driver: {most_stable}")
+        if metric in tr.EXTENSIVE_METRICS:
+            print("     NOTE: this driver is an extensive (whole-CNS total) metric, so")
+            print("     matching it conserves TOTAL dose and dilutes the per-gram level")
+            print("     in the larger species -- a diagnostic, not a dosing rule.")
+        print()
 
     f3 = plot.plot_translation(all_tables["transduced_per_g_cns"], OUT)
     print(f"  -> saved {os.path.basename(f3)} (driver: transduced vector per g CNS)")

@@ -8,6 +8,6 @@ with program-specific data before use in decision-making.
 """
 
 from . import (physiology, model, translation, data_integration,
-               biodistribution, pd_safety, validation, vpc, plotting)  # noqa
+               biodistribution, pd_safety, fih, validation, vpc, plotting)  # noqa
 __all__ = ["physiology", "model", "translation", "data_integration",
-           "biodistribution", "pd_safety", "validation", "vpc", "plotting"]
+           "biodistribution", "pd_safety", "fih", "validation", "vpc", "plotting"]

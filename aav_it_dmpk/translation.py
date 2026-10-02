@@ -24,13 +24,22 @@ import numpy as np
 from .model import simulate, exposure_metrics
 
 # exposure metrics that can anchor a translation
-METRIC_CHOICES = ("csf_auc_cranial", "transduced_per_g_cns", "protein_peak_AU")
+METRIC_CHOICES = ("csf_auc_cranial", "transduced_per_g_cns",
+                  "protein_peak_per_g_cns", "protein_peak_AU")
 
 METRIC_LABEL = {
     "csf_auc_cranial": "Cranial CSF exposure (AUC)",
     "transduced_per_g_cns": "Transduced vector per g CNS",
-    "protein_peak_AU": "Peak transgene product",
+    "protein_peak_per_g_cns": "Peak transgene product per g CNS",
+    "protein_peak_AU": "Peak transgene product (total, extensive)",
 }
+
+# Metrics that are whole-CNS totals rather than concentrations. Matching one of
+# these across species holds the *total* dose roughly constant (the per-gram
+# level then falls in the larger species), which is rarely the intended efficacy
+# hypothesis -- callers should flag it.
+EXTENSIVE_METRICS = frozenset({"protein_peak_AU", "protein_terminal_AU",
+                               "transduced_total_vg", "drg_total_vg"})
 
 
 def Arm(phys, site, dose=None, bio=None):

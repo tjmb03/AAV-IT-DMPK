@@ -27,6 +27,7 @@ from aav_it_dmpk.model import (default_bio, apply_serotype, simulate,
 from aav_it_dmpk import translation as tr
 from aav_it_dmpk import data_integration as di
 from aav_it_dmpk import pd_safety as ps
+from aav_it_dmpk import fih as fh
 
 st.set_page_config(page_title="IT-AAV translational DMPK",
                    page_icon="🧬", layout="wide")
@@ -91,7 +92,7 @@ st.title("Intrathecal AAV — translational DMPK explorer")
 
 tabs = st.tabs(["Disposition & route", "Cross-species translation",
                 "DRG safety", "Dose–response (saturable)",
-                "Transgene PD", "Bayesian update", "About"])
+                "Transgene PD", "Bayesian update", "FIH dose bracket", "About"])
 
 # ==========================================================================
 # Tab 1 — Disposition & route
@@ -170,25 +171,35 @@ with tabs[1]:
 
     nh = df[df["species"] == "Human"].iloc[0]
     nn = df[df["species"] == "Cynomolgus NHP"].iloc[0]
-    bases = ("vg_per_kg", "vg_per_g_brain", "vg_per_mL_csf")
+    bases = ("total_vg", "vg_per_kg", "vg_per_g_brain", "vg_per_mL_csf")
     folds = {b: nh[b] / nn[b] for b in bases}
     stable = min(folds, key=lambda b: abs(np.log(folds[b])))
     st.info(f"Most-conserved basis across the **NHP → human** bridge for this "
             f"driver: **{stable.replace('_', ' ')}** "
             f"(fold-change {folds[stable]:.2f}). The conserved basis depends on "
             f"the driver — it is an output, not an assumption.")
+    if driver in tr.EXTENSIVE_METRICS:
+        st.warning(
+            "**This driver is an extensive (whole-CNS total) metric, not a "
+            "concentration.** Matching it across species conserves the *total* "
+            "dose, so the per-gram level falls roughly in proportion to CNS "
+            "mass (~19× from NHP to human) — and the implied body-weight "
+            "exponent collapses toward 0. Read this panel as a diagnostic of "
+            "the metric rather than a dosing rule; the per-g and CSF-AUC "
+            "drivers give interpretable scaling.")
 
     x = np.arange(3)
     fig, ax = plt.subplots(1, 2, figsize=(11, 3.6))
     ax[0].bar(x, df["total_vg"], color="#2c6fbb")
     ax[0].set_yscale("log"); ax[0].set_xticks(x); ax[0].set_xticklabels(df["species"], fontsize=8)
     ax[0].set_ylabel("total dose (vg)"); ax[0].set_title("Projected total dose")
-    w = 0.27
-    for i, (col, lab, c2) in enumerate([("vg_per_kg", "vg/kg", "#9c2c2c"),
+    w = 0.21
+    for i, (col, lab, c2) in enumerate([("total_vg", "total vg", "#2c6fbb"),
+                                        ("vg_per_kg", "vg/kg", "#9c2c2c"),
                                         ("vg_per_g_brain", "vg/g brain", "#d98c00"),
                                         ("vg_per_mL_csf", "vg/mL CSF", "#3a7d44")]):
         v = np.array(df[col], float); v = v / v[0]
-        ax[1].bar(x + (i - 1) * w, v, w, label=lab, color=c2)
+        ax[1].bar(x + (i - 1.5) * w, v, w, label=lab, color=c2)
     ax[1].set_yscale("log"); ax[1].set_xticks(x); ax[1].set_xticklabels(df["species"], fontsize=8)
     ax[1].axhline(1.0, color="gray", ls=":", lw=1)
     ax[1].set_ylabel("relative to source"); ax[1].set_title("Which basis is conserved?")
@@ -383,9 +394,210 @@ with tabs[5]:
         st.info("Set the synthetic-study parameters, then click **Run Bayesian update**.")
 
 # ==========================================================================
-# Tab 7 — About
+# Tab 7 — FIH dose bracket
 # ==========================================================================
 with tabs[6]:
+    st.subheader("First-in-human dose bracket (NOAEL-anchored)")
+    st.markdown(
+        "The translation tab projects an **efficacious** dose. A starting dose is "
+        "a different question, set by safety. This tab runs the inversion: the tox "
+        "study's NOAEL *dose* → the DRG exposure it produced (**that** is your "
+        "threshold, derived rather than chosen) → the human dose carrying the same "
+        "exposure → a safety factor → check it still clears the efficacy floor.")
+
+    fc = st.columns([1, 1, 1])
+    tox_species = fc[0].selectbox("Tox species", ["cyno", "mouse"], index=0,
+                                  format_func=lambda s: SPECIES_LABEL[s])
+    noael_log = fc[1].slider("NOAEL from tox study (log₁₀ vg)", 10.0, 15.0, 13.0, 0.1)
+    noael = 10.0 ** noael_log
+    necropsy_day = fc[2].slider("Necropsy day for DRG readout", 7, 90, 28, 7)
+
+    fc2 = st.columns([1, 1, 1])
+    sf_sel = fc2[0].multiselect("Safety factors", [2, 3, 6, 10, 20], default=[3, 6, 10])
+    floor_pct = fc2[1].slider("Efficacy floor (% brain substrate reduction)", 10, 60, 30, 5)
+    target_pct = fc2[2].slider("Efficacy target (% reduction)", 50, 95, 70, 5)
+
+    bio_fih = build_bio(serotype, saturable_uptake=False)
+    if not sf_sel:
+        st.info("Select at least one safety factor.")
+    else:
+        with st.spinner("Inverting NOAEL → threshold → human dose…"):
+            br = fh.fih_bracket(
+                P.get_species(tox_species), P.get_species("human"), bio_fih,
+                noael_dose=noael, site="ICM", day=float(necropsy_day),
+                safety_factors=tuple(float(s) for s in sorted(sf_sel)),
+                pd_floor_reduction=floor_pct / 100.0,
+                pd_target_reduction=target_pct / 100.0)
+
+        m = st.columns(4)
+        m[0].metric("Derived DRG threshold",
+                    f"{br['derived_threshold_vg_per_diploid']:.0f}", "vg/diploid")
+        m[1].metric("Human dose, matched exposure",
+                    f"{br['human_dose_matched_exposure_vg']:.2e}", "vg")
+        m[2].metric(f"Efficacy floor (≥{floor_pct}%)", f"{br['pd_floor_vg']:.2e}", "vg")
+        m[3].metric(f"Efficacy target (≥{target_pct}%)", f"{br['pd_target_vg']:.2e}", "vg")
+
+        st.caption(
+            f"Naive body-weight scaling of the NOAEL would give "
+            f"{br['bodyweight_scaled_dose_vg']:.2e} vg — "
+            f"**{br['bodyweight_vs_exposure_fold']:.2f}×** the exposure-matched dose. "
+            "That gap is why the mechanistic model exists.")
+
+        sdf = pd.DataFrame(br["starting_doses"]).rename(columns={
+            "safety_factor": "safety factor", "starting_dose_vg": "starting dose (vg)",
+            "clears_pd_floor": "clears efficacy floor",
+            "fold_above_floor": "× above floor", "fold_of_pd_target": "× of target"})
+        st.dataframe(sdf.style.format({"starting dose (vg)": "{:.2e}",
+                                       "× above floor": "{:.2f}",
+                                       "× of target": "{:.2f}"}),
+                     use_container_width=True)
+
+        if br["window_exists"]:
+            st.success("**A window exists.** At least one safety-factored starting "
+                       "dose sits above the minimally active dose.")
+        else:
+            st.error("**No window at these settings.** Every safety-factored start "
+                     "falls below the efficacy floor — the lever is capsid "
+                     "detargeting or route, not dose selection.")
+
+        fig, ax = plt.subplots(figsize=(9.5, 2.9))
+        hed = br["human_dose_matched_exposure_vg"]
+        ax.axvspan(br["pd_floor_vg"], hed, color="#3a7d44", alpha=0.10,
+                   label="therapeutic window")
+        ax.axvline(hed, color="#9c2c2c", lw=2, label="DRG-limited (matched NOAEL exposure)")
+        ax.axvline(br["pd_floor_vg"], color="#3a7d44", lw=2, ls="--",
+                   label=f"efficacy floor (≥{floor_pct}%)")
+        ax.axvline(br["pd_target_vg"], color="#d98c00", lw=2, ls=":",
+                   label=f"efficacy target (≥{target_pct}%)")
+        for s in br["starting_doses"]:
+            ax.plot(s["starting_dose_vg"], 0.5, "o", ms=11, color="#2c6fbb", zorder=5)
+            ax.annotate(f"SF {s['safety_factor']:.0f}×",
+                        (s["starting_dose_vg"], 0.5), textcoords="offset points",
+                        xytext=(0, 13), ha="center", fontsize=8)
+        ax.set_xscale("log"); ax.set_ylim(0, 1); ax.set_yticks([])
+        ax.set_xlabel("total dose (vg)")
+        ax.set_title("FIH dose bracket")
+        ax.legend(frameon=False, fontsize=8, loc="lower right", ncol=2)
+        fig.tight_layout(); st.pyplot(fig); plt.close(fig)
+
+        st.caption(
+            "What the model supplies: the NOAEL→exposure conversion and the "
+            "cross-species exposure match. What it does **not** supply: the NOAEL "
+            "itself, the histopathology behind it, or the choice of safety factor. "
+            "Parameters here are illustrative placeholders.")
+
+        # ---------------- uncertainty propagation ----------------
+        st.markdown("---")
+        st.markdown("#### Does the window survive uncertainty?")
+        st.markdown(
+            "Three sources are propagated separately, because they do not act alike. "
+            "The ceiling is a **ratio** anchor (tox exposure matched in human), so a "
+            "global biology multiplier largely cancels; the floor is an **absolute** "
+            "anchor and carries the biology uncertainty in full. Propagating the "
+            "posterior alone would give a falsely tight ceiling.")
+
+        uc = st.columns([1, 1, 1, 1])
+        loael_log = uc[0].slider("LOAEL (log₁₀ vg)", noael_log + 0.1, noael_log + 1.5,
+                                 min(noael_log + 0.5, 15.0), 0.1,
+                                 help="Next dose group up. The true threshold lies "
+                                      "between NOAEL and LOAEL — the censoring window.")
+        phys_cv = uc[1].slider("Human physiology CV", 0.0, 0.40, 0.15, 0.05,
+                               help="CSF volume and DRG mass uncertainty.")
+        n_draws = uc[2].slider("Draws", 40, 200, 80, 20)
+        use_post = uc[3].checkbox("Use Bayesian posterior", value=True,
+                                  help="Requires a run on the Bayesian update tab.")
+
+        post_samples = None
+        if use_post:
+            if "bayes" in st.session_state:
+                post_samples = st.session_state["bayes"][0]["samples"]
+            else:
+                st.caption("⚠️ No posterior yet — run the **Bayesian update** tab "
+                           "first, or untick to use the prior.")
+
+        if st.button("▶ Propagate uncertainty", type="primary"):
+            with st.spinner(f"Propagating {n_draws} draws…"):
+                st.session_state["fih_unc"] = fh.propagate_fih_bracket(
+                    P.get_species(tox_species), P.get_species("human"), bio_fih,
+                    noael_dose=noael, posterior_samples=post_samples,
+                    site="ICM", day=float(necropsy_day),
+                    safety_factors=tuple(float(s) for s in sorted(sf_sel)),
+                    pd_floor_reduction=floor_pct / 100.0,
+                    loael_dose=10.0 ** loael_log, physiol_cv=phys_cv,
+                    n_draws=int(n_draws), seed=1)
+
+        if "fih_unc" in st.session_state:
+            r = st.session_state["fih_unc"]
+            cc, ff = r["ceiling"], r["floor"]
+            u = st.columns(2)
+            u[0].metric("DRG ceiling (median)", f"{cc['median']:.2e}",
+                        f"95% CI {cc['p2.5']:.1e} – {cc['p97.5']:.1e}  "
+                        f"({r['ceiling_spread_fold']:.1f}× spread)")
+            u[1].metric("Efficacy floor (median)", f"{ff['median']:.2e}",
+                        f"95% CI {ff['p2.5']:.1e} – {ff['p97.5']:.1e}  "
+                        f"({r['floor_spread_fold']:.1f}× spread)")
+
+            att = r["ceiling_attribution_fold"]
+            st.markdown("**What actually drives the ceiling spread** "
+                        "(97.5/2.5 fold, one source at a time):")
+            adf = pd.DataFrame([
+                {"source": "biology (posterior)", "spread (fold)": att["biology_only"]},
+                {"source": "NOAEL censoring (dose spacing)", "spread (fold)": att["noael_only"]},
+                {"source": "human physiology", "spread (fold)": att["physiology_only"]}])
+            st.dataframe(adf.style.format({"spread (fold)": "{:.2f}×"}),
+                         use_container_width=True, hide_index=True)
+            if att["biology_only"] < 1.1:
+                st.info("The biology posterior contributes essentially **nothing** to "
+                        "ceiling uncertainty — it cancels in the ratio anchor. Tightening "
+                        "the posterior will not tighten the ceiling; narrower dose "
+                        "spacing and better human physiology estimates will.")
+
+            wdf = pd.DataFrame([{
+                "safety factor": s["safety_factor"],
+                "starting dose (median)": s["start_median"],
+                "95% low": s["start_p2.5"], "95% high": s["start_p97.5"],
+                "P(window survives)": s["p_window_survives"],
+                "survives conservative tail": s["survives_conservative_tail"],
+            } for s in r["starting_doses"]])
+            st.dataframe(wdf.style.format({
+                "starting dose (median)": "{:.2e}", "95% low": "{:.2e}",
+                "95% high": "{:.2e}", "P(window survives)": "{:.2f}"}),
+                use_container_width=True, hide_index=True)
+
+            worst = min(s["p_window_survives"] for s in r["starting_doses"])
+            if all(s["survives_conservative_tail"] for s in r["starting_doses"]):
+                st.success("**Window survives the conservative tail** for every safety "
+                           "factor — low-end ceiling still clears the high-end floor.")
+            elif worst > 0.8:
+                st.warning("Window holds at the medians but **not** under the "
+                           "conservative tail for every safety factor.")
+            else:
+                st.error("**Window does not reliably survive uncertainty.**")
+
+            fig, ax = plt.subplots(figsize=(9.5, 3.1))
+            ax.axvspan(ff["p2.5"], ff["p97.5"], color="#3a7d44", alpha=0.18,
+                       label="efficacy floor 95% CI")
+            ax.axvspan(cc["p2.5"], cc["p97.5"], color="#9c2c2c", alpha=0.18,
+                       label="DRG ceiling 95% CI")
+            ax.axvline(ff["median"], color="#3a7d44", lw=2, ls="--")
+            ax.axvline(cc["median"], color="#9c2c2c", lw=2)
+            for s in r["starting_doses"]:
+                ax.plot(s["start_median"], 0.5, "o", ms=10, color="#2c6fbb", zorder=6)
+                ax.hlines(0.5, s["start_p2.5"], s["start_p97.5"],
+                          color="#2c6fbb", lw=2, alpha=0.6, zorder=5)
+                ax.annotate(f"SF {s['safety_factor']:.0f}×",
+                            (s["start_median"], 0.5), textcoords="offset points",
+                            xytext=(0, 13), ha="center", fontsize=8)
+            ax.set_xscale("log"); ax.set_ylim(0, 1); ax.set_yticks([])
+            ax.set_xlabel("total dose (vg)")
+            ax.set_title("FIH bracket with uncertainty")
+            ax.legend(frameon=False, fontsize=8, loc="lower right")
+            fig.tight_layout(); st.pyplot(fig); plt.close(fig)
+
+# ==========================================================================
+# Tab 8 — About
+# ==========================================================================
+with tabs[7]:
     st.markdown(
         """
 ### About

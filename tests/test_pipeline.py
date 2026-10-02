@@ -19,6 +19,7 @@ from aav_it_dmpk import data_integration as di
 from aav_it_dmpk import pd_safety as ps
 from aav_it_dmpk import validation as V
 from aav_it_dmpk import vpc as VPC
+from aav_it_dmpk import fih as fh
 
 
 @pytest.fixture
@@ -278,3 +279,96 @@ def test_vpc_tissue_per_region(vpc_study_post):
     for rp in vt["per_region"]:
         assert len(rp["bands"][50]["median"]) == nt
         assert len(rp["obs_pct"][50]) == nt
+
+
+# --------------------------------------------------------------------------
+# FIH dose-bracket tests
+# --------------------------------------------------------------------------
+def test_threshold_roundtrip(bio, cyno):
+    """Inverting the derived threshold must return the NOAEL dose."""
+    b9 = apply_serotype(bio, "AAV9")
+    thr = fh.threshold_from_noael(cyno, b9, 1e13)
+    assert fh.dose_for_drg_load(cyno, b9, thr) == pytest.approx(1e13, rel=1e-3)
+
+
+def test_drg_load_monotone_in_dose(bio, cyno):
+    b9 = apply_serotype(bio, "AAV9")
+    loads = [fh.worst_drg_load(cyno, b9, d) for d in (1e12, 1e13, 1e14)]
+    assert loads[0] < loads[1] < loads[2]
+
+
+def test_exposure_match_differs_from_bodyweight_scaling(bio, cyno):
+    """The mechanistic HED should not coincide with naive BW scaling."""
+    b9 = apply_serotype(bio, "AAV9")
+    human = P.get_species("human")
+    br = fh.fih_bracket(cyno, human, b9, noael_dose=1e13)
+    assert br["bodyweight_vs_exposure_fold"] > 1.2       # BW scaling overshoots
+    assert br["human_dose_matched_exposure_vg"] > 1e13
+
+
+def test_starting_dose_scales_with_safety_factor(bio, cyno):
+    b9 = apply_serotype(bio, "AAV9")
+    human = P.get_species("human")
+    br = fh.fih_bracket(cyno, human, b9, noael_dose=1e13, safety_factors=(3.0, 6.0))
+    d3, d6 = [s["starting_dose_vg"] for s in br["starting_doses"]]
+    assert d3 == pytest.approx(2 * d6, rel=1e-6)
+    assert br["window_exists"]
+
+
+def test_no_window_when_noael_is_low(bio, cyno):
+    """A low NOAEL must close the window rather than silently pass."""
+    b9 = apply_serotype(bio, "AAV9")
+    human = P.get_species("human")
+    br = fh.fih_bracket(cyno, human, b9, noael_dose=2e11, safety_factors=(10.0,))
+    assert not br["window_exists"]
+    assert not br["starting_doses"][0]["clears_pd_floor"]
+
+
+# --------------------------------------------------------------------------
+# FIH uncertainty-propagation tests
+# --------------------------------------------------------------------------
+def test_drg_load_is_linear_in_dose(bio, cyno):
+    """The closed-form ceiling depends on exact dose-linearity of DRG load."""
+    b9 = apply_serotype(bio, "AAV9")
+    unit = fh.worst_drg_load(cyno, b9, 1.0)
+    for d in (1e12, 1e13, 1e14):
+        assert fh.worst_drg_load(cyno, b9, d) == pytest.approx(d * unit, rel=1e-9)
+
+
+def test_biology_cancels_in_ceiling_ratio(bio, cyno):
+    """Ceiling is a ratio anchor: a global biology multiplier must cancel.
+
+    This is why propagating the posterior alone gives a falsely tight ceiling.
+    """
+    b9 = apply_serotype(bio, "AAV9")
+    human = P.get_species("human")
+    ratios = []
+    for fu, fc in [(1.0, 1.0), (1.8, 0.7), (0.6, 1.5), (2.5, 0.5)]:
+        b = di._bio_with(b9, fu, fc)
+        ratios.append(fh.worst_drg_load(cyno, b, 1.0) / fh.worst_drg_load(human, b, 1.0))
+    assert max(ratios) / min(ratios) < 1.02      # cancels to within 2%
+
+
+def test_physiology_does_not_cancel(bio, cyno):
+    b9 = apply_serotype(bio, "AAV9")
+    base = fh.worst_drg_load(cyno, b9, 1.0) / fh.worst_drg_load(P.get_species("human"), b9, 1.0)
+    pert = fh._perturb_physiology(P.get_species("human"), drg_mult=1.3)
+    moved = fh.worst_drg_load(cyno, b9, 1.0) / fh.worst_drg_load(pert, b9, 1.0)
+    assert moved / base > 1.1                     # DRG mass genuinely moves the ceiling
+
+
+def test_propagation_attribution_and_shapes(bio, cyno):
+    b9 = apply_serotype(bio, "AAV9")
+    r = fh.propagate_fih_bracket(
+        cyno, P.get_species("human"), b9, noael_dose=1e13,
+        posterior_samples=np.column_stack([np.random.default_rng(0).lognormal(0, .2, 50),
+                                           np.random.default_rng(1).lognormal(0, .2, 50)]),
+        loael_dose=3e13, physiol_cv=0.15, safety_factors=(6.0,),
+        n_draws=12, seed=0)
+    assert r["ceiling"]["p2.5"] <= r["ceiling"]["median"] <= r["ceiling"]["p97.5"]
+    assert r["floor"]["p2.5"] <= r["floor"]["median"] <= r["floor"]["p97.5"]
+    att = r["ceiling_attribution_fold"]
+    assert att["biology_only"] < 1.1              # biology cancels
+    assert att["noael_only"] > 1.5                # censoring dominates
+    s = r["starting_doses"][0]
+    assert 0.0 <= s["p_window_survives"] <= 1.0
