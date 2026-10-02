@@ -198,7 +198,7 @@ pytest -q                   # the scientific claims, as tests (also run in CI)
 
 Or install as a package: `pip install -e .` (library deps: NumPy, SciPy, matplotlib, pandas; Python 3.10+).
 
-**Interactive app.** An interactive explorer (sidebar controls for species, route, serotype, dose; tabs for disposition, translation, DRG safety, saturable uptake, PD, and a live Bayesian update) is in `app.py`:
+**Interactive app.** An interactive explorer (sidebar controls for species, route, serotype, dose; tabs for disposition, translation, DRG safety, saturable uptake, PD, a live Bayesian update, and a NOAEL-anchored FIH dose bracket) is in `app.py`:
 **Live app:**
 https://aav-it-dmpk-3ureudedfuzyuhpxhsqtar.streamlit.app/
 
